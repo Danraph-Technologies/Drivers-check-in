@@ -104,6 +104,7 @@ Rules enforced by the database: seats between 0 and 100, amounts not negative, c
 - Next.js (App Router, TypeScript, Tailwind CSS) on Vercel
 - Neon Postgres, accessed with Drizzle ORM
 - Sign in: bcryptjs for PIN and password hashing, a signed JWT in an httpOnly cookie for the session (30 days)
+- Stale session handling: role layouts re-check the account on every navigation. If the cookie points at a removed or deactivated account, the browser is sent to /logout which clears the cookie and lands on the sign in page with a message, so a stale cookie can never cause a redirect loop.
 - Zod for server side validation
 - CSV export as an Excel friendly file, and a PDF activity report generator with a chosen date range
 - No chart library: the weekly bars are plain server rendered elements

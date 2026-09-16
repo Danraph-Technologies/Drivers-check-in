@@ -9,12 +9,35 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://check-in.ecocruise.org'),
   applicationName: 'DanRaph Trip Report',
   title: {
     default: 'DanRaph Trip Report',
     template: '%s | DanRaph Trip Report',
   },
   description: 'Trip reports for DanRaph Transport drivers and management.',
+  openGraph: {
+    type: 'website',
+    siteName: 'DanRaph Trip Report',
+    title: 'DanRaph Trip Report',
+    description:
+      'Drivers file trip reports from the road. Management sees who loaded, the seats, and the money.',
+    url: 'https://check-in.ecocruise.org',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'DanRaph Integrated Services - Driver Trip Report',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DanRaph Trip Report',
+    description: 'Trip reports for DanRaph Transport drivers and management.',
+    images: ['/og-image.png'],
+  },
 };
 
 export const viewport: Viewport = {

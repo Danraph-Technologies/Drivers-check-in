@@ -9,7 +9,7 @@ import { logout } from '@/app/actions/auth';
 export default async function DriverLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session || session.role !== 'driver' || !session.driverId) {
-    redirect('/login');
+    redirect('/logout');
   }
 
   // Re-check active status on every navigation so deactivation kills stale sessions.
@@ -19,8 +19,11 @@ export default async function DriverLayout({ children }: { children: React.React
     .innerJoin(users, eq(drivers.userId, users.id))
     .where(eq(drivers.id, session.driverId));
   const d = rows[0];
-  if (!d || !d.isActive || d.status !== 'active') {
-    redirect('/login?error=This+account+is+not+active.+Contact+the+admin');
+  if (!d) {
+    redirect('/logout?error=' + encodeURIComponent('Your session has expired. Please sign in again.'));
+  }
+  if (!d.isActive || d.status !== 'active') {
+    redirect('/logout?error=' + encodeURIComponent('This account is not active. Contact the admin'));
   }
 
   return (

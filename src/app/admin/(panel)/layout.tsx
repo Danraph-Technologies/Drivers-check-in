@@ -9,6 +9,9 @@ import {
   ShieldCheck,
   Users,
 } from 'lucide-react';
+import { eq } from 'drizzle-orm';
+import { db } from '@/db';
+import { users } from '@/db/schema';
 import { getSession } from '@/lib/auth';
 import { logout } from '@/app/actions/auth';
 import { NavLink } from './NavLink';
@@ -17,6 +20,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const session = await getSession();
   if (!session || session.role !== 'admin') {
     redirect('/admin/login');
+  }
+
+  // Re-check the account on every navigation so a removed or deactivated
+  // admin cannot keep using an old cookie.
+  const adminRows = await db
+    .select({ isActive: users.isActive })
+    .from(users)
+    .where(eq(users.id, session.sub));
+  const account = adminRows[0];
+  if (!account) {
+    redirect('/logout?error=' + encodeURIComponent('Your session has expired. Please sign in again.'));
+  }
+  if (!account.isActive) {
+    redirect('/logout?error=' + encodeURIComponent('This account is not active. Contact the admin'));
   }
 
   const nav = [
