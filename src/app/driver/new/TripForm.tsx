@@ -51,6 +51,21 @@ function todayInLagos(): string {
   }).format(new Date());
 }
 
+/**
+ * Which phone family the driver is on, so the unblock instructions can
+ * be direct instead of covering both systems. iPadOS 13+ reports as a
+ * Mac, so it is caught by the touch-screen check.
+ */
+function detectPlatform(): 'ios' | 'android' | 'other' {
+  if (typeof navigator === 'undefined') return 'other';
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/.test(ua)) return 'ios';
+  if (/Android/.test(ua)) return 'android';
+  const nav = navigator as Navigator & { maxTouchPoints?: number };
+  if (nav.platform === 'MacIntel' && (nav.maxTouchPoints ?? 0) > 1) return 'ios';
+  return 'other';
+}
+
 /** One consistent, thumb-sized field for every input in the form. */
 const fieldCls = 'field field-lg';
 
@@ -73,6 +88,7 @@ export default function TripForm({
   const [restored, setRestored] = useState(false);
   const [locState, setLocState] = useState<'asking' | 'ok' | 'denied' | 'fail'>('asking');
   const locationRef = useRef<LocationResult>({ status: 'unavailable' });
+  const [platform] = useState<'ios' | 'android' | 'other'>(() => detectPlatform());
 
   // Ask for permission the moment the form opens, so the browser prompt
   // shows before the driver has typed anything. Both Android (Chrome) and
@@ -367,10 +383,11 @@ export default function TripForm({
                 <span>Location is turned off for this app.</span>
               </span>
               <span className="mt-1.5 block">
-                On Android (Chrome): tap the lock or information icon left of the address bar,
-                then Permissions, then Location, then Allow. On iPhone (Safari): open Settings,
-                scroll to Safari, then Location, and set it to Ask or Allow while using the
-                website.
+                {platform === 'ios'
+                  ? 'Open the Settings app, scroll down to Safari, tap Location, then choose Allow. Come back here and press Try again.'
+                  : platform === 'android'
+                    ? 'Tap the lock or information icon left of the address bar, then Permissions, then Location, then Allow. Come back here and press Try again.'
+                    : 'On Android: tap the lock or information icon left of the address bar, then Permissions, then Location, then Allow. On iPhone: open Settings, scroll to Safari, tap Location, then Allow.'}
               </span>
               <button
                 type="button"
