@@ -3,8 +3,9 @@ import { Banknote, Download, FileText, Fuel, Package, Route, Users } from 'lucid
 import { db } from '@/db';
 import { trips, drivers, users, buses } from '@/db/schema';
 import { requireAdmin } from '@/lib/auth';
-import { formatDate, formatNaira, currentWeekRange, mondayOf } from '@/lib/time';
-import { addDays, daysInclusive } from '@/lib/time';
+import { formatDate, formatNaira, currentWeekRange, addDays, daysInclusive } from '@/lib/time';
+import { parsePeriod, periodRange, periodHeading, type Period } from '@/lib/time';
+import { PeriodFilter } from '@/components/period-filter';
 import { EmptyState, StatTile } from '@/components/ui';
 import { Pagination } from '@/components/pagination';
 
@@ -15,21 +16,20 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export default async function AdminReports({
   searchParams,
 }: {
-  searchParams: Promise<{ week?: string; from?: string; to?: string; page?: string }>;
+  searchParams: Promise<{ period?: string; week?: string; from?: string; to?: string; page?: string }>;
 }) {
   await requireAdmin();
   const sp = await searchParams;
 
-  // A valid custom From/To range wins over the week picker; anything
-  // tampered falls back to the current week.
+  // Resolution order: a valid custom From/To range wins, then the period
+  // chips (Today / Yesterday / This week / ...). Defaults to this week.
   const validCustom =
     sp.from && sp.to && DATE_RE.test(sp.from) && DATE_RE.test(sp.to) && sp.from <= sp.to;
   const isCustom = Boolean(validCustom);
-  const [rangeFrom, rangeTo] = isCustom
+  const period = parsePeriod(sp.period);
+  const [rangeFrom, rangeTo]: [string, string] = isCustom
     ? [sp.from as string, sp.to as string]
-    : sp.week
-      ? [mondayOf(sp.week), addDays(mondayOf(sp.week), 6)]
-      : currentWeekRange();
+    : periodRange(period);
 
   // Both queries go out as ONE database round trip (neon-http batch).
   const [rows, daily] = await db.batch([
@@ -91,10 +91,8 @@ export default async function AdminReports({
   const page = Math.min(Math.max(1, Number(sp.page) || 1), totalPages);
   const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const rangeExtra: Record<string, string | undefined> = isCustom
-    ? { from: rangeFrom, to: rangeTo }
-    : sp.week
-      ? { week: sp.week }
-      : {};
+    ? { period: 'custom', from: rangeFrom, to: rangeTo }
+    : { period };
 
   const totalTrips = rows.reduce((s, r) => s + r.tripCount, 0);
   const totalSeats = rows.reduce((s, r) => s + r.seats, 0);
@@ -109,49 +107,42 @@ export default async function AdminReports({
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight text-ink-900">Activity report</h1>
           <p className="mt-1 text-sm text-ink-500">
-            {formatDate(rangeFrom)} to {formatDate(rangeTo)}
-            {isCustom ? ' (custom range)' : ''}
+            {isCustom
+              ? `${formatDate(rangeFrom)} to ${formatDate(rangeTo)} (custom range)`
+              : periodHeading(period, rangeFrom, rangeTo)}
+            {'  '}|  Downloads follow this range
           </p>
         </div>
+        <PeriodFilter basePath="/admin/reports" current={isCustom ? 'custom' : period} />
+        <form method="get" className="flex flex-wrap items-center gap-2">
+          {isCustom ? <input type="hidden" name="period" value="custom" /> : null}
+          <input
+            type="date"
+            name="from"
+            defaultValue={rangeFrom}
+            aria-label="From date"
+            className="field !w-auto"
+          />
+          <span className="text-xs font-semibold text-ink-400">to</span>
+          <input
+            type="date"
+            name="to"
+            defaultValue={rangeTo}
+            aria-label="To date"
+            className="field !w-auto"
+          />
+          <button type="submit" className="btn btn-dark btn-sm">
+            Apply dates
+          </button>
+          <a
+            href="/admin/reports"
+            className="btn btn-ghost btn-sm"
+            title="Clear the filter and show this week"
+          >
+            Clear filter
+          </a>
+        </form>
         <div className="flex flex-wrap items-center gap-2">
-          <form method="get" className="flex items-center gap-2">
-            <input
-              type="date"
-              name="from"
-              defaultValue={rangeFrom}
-              aria-label="From date"
-              className="field !w-auto"
-            />
-            <span className="text-xs font-semibold text-ink-400">to</span>
-            <input
-              type="date"
-              name="to"
-              defaultValue={rangeTo}
-              aria-label="To date"
-              className="field !w-auto"
-            />
-            <button type="submit" className="btn btn-dark btn-sm">
-              Apply
-            </button>
-          </form>
-          {isCustom ? (
-            <a href="/admin/reports" className="btn btn-ghost btn-sm">
-              Back to this week
-            </a>
-          ) : (
-            <form method="get" className="flex items-center gap-2">
-              <input
-                type="date"
-                name="week"
-                defaultValue={rangeFrom}
-                aria-label="Pick a week"
-                className="field !w-auto"
-              />
-              <button type="submit" className="btn btn-outline btn-sm">
-                Go
-              </button>
-            </form>
-          )}
           <a
             href={`/admin/reports/export?from=${rangeFrom}&to=${rangeTo}`}
             className="btn btn-outline btn-sm"

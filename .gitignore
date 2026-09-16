@@ -46,3 +46,6 @@ next-env.d.ts
 # tool cache
 .token-savior-cache.json
 scripts/smoke.log
+
+# scratch files
+.tmp-*

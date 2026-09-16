@@ -1,9 +1,9 @@
 import { eq, desc } from 'drizzle-orm';
-import { ShieldCheck, TriangleAlert } from 'lucide-react';
+import { Check, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { requireAdmin } from '@/lib/auth';
-import { createAdmin, setAdminActive } from '@/app/actions/trips';
+import { changeOwnPassword, createAdmin, setAdminActive } from '@/app/actions/trips';
 import { SubmitButton } from '@/components/submit-button';
 import { Pagination } from '@/components/pagination';
 import { formatDateTimeWAT } from '@/lib/time';
@@ -13,9 +13,9 @@ export const metadata = { title: 'Team' };
 export default async function AdminTeam({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; page?: string }>;
+  searchParams: Promise<{ error?: string; saved?: string; page?: string }>;
 }) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const sp = await searchParams;
 
   const admins = await db
@@ -52,6 +52,12 @@ export default async function AdminTeam({
         <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
           <TriangleAlert size={17} className="mt-0.5 shrink-0" />
           <span>{sp.error}</span>
+        </div>
+      ) : null}
+      {sp.saved ? (
+        <div className="flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm font-semibold text-brand-800">
+          <Check size={17} />
+          Password changed.
         </div>
       ) : null}
 
@@ -96,6 +102,48 @@ export default async function AdminTeam({
         <p className="mt-2.5 text-xs text-ink-400">
           Share the password privately. They sign in at /admin/login.
         </p>
+      </section>
+
+      <section className="card p-4">
+        <h2 className="text-base font-bold text-ink-900">Change my password</h2>
+        <p className="mt-1 text-sm text-ink-500">
+          You are signed in as {session.name}. Confirm your current password, then pick the new
+          one. A simple password is fine as long as it is at least 8 characters.
+        </p>
+        <form
+          action={async (formData: FormData) => {
+            'use server';
+            const result = await changeOwnPassword(formData);
+            const { redirect } = await import('next/navigation');
+            redirect(
+              result.ok ? '/admin/team?saved=1' : '/admin/team?error=' + encodeURIComponent(result.error),
+            );
+          }}
+          className="mt-4 grid gap-3 sm:grid-cols-3"
+        >
+          <label className="block">
+            <span className="label">Current password</span>
+            <input name="currentPassword" type="password" required className="field" />
+          </label>
+          <label className="block">
+            <span className="label">New password</span>
+            <input
+              name="newPassword"
+              type="password"
+              required
+              minLength={8}
+              placeholder="At least 8 characters"
+              className="field"
+            />
+          </label>
+          <label className="block">
+            <span className="label">Repeat new password</span>
+            <input name="confirmPassword" type="password" required minLength={8} className="field" />
+          </label>
+          <div className="sm:col-span-3">
+            <SubmitButton pendingLabel="Saving...">Change password</SubmitButton>
+          </div>
+        </form>
       </section>
 
       <div className="card overflow-x-auto">

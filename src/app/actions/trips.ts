@@ -497,6 +497,41 @@ export async function createAdmin(formData: FormData): Promise<ActionResult> {
   return { ok: true };
 }
 
+// Any signed-in admin changes their own password. The current password
+// must be confirmed first, and the session cookie stays as it is.
+export async function changeOwnPassword(formData: FormData): Promise<ActionResult> {
+  const session = await requireAdmin();
+  const currentPassword = String(formData.get('currentPassword') ?? '');
+  const newPassword = String(formData.get('newPassword') ?? '');
+  const confirmPassword = String(formData.get('confirmPassword') ?? '');
+
+  if (newPassword.length < 8) {
+    return { ok: false, error: 'New password must be at least 8 characters.' };
+  }
+  if (newPassword !== confirmPassword) {
+    return { ok: false, error: 'The two new passwords do not match.' };
+  }
+  if (newPassword === currentPassword) {
+    return { ok: false, error: 'The new password must be different from the current one.' };
+  }
+
+  const rows = await db
+    .select({ passwordHash: users.passwordHash })
+    .from(users)
+    .where(eq(users.id, session.sub));
+  const me = rows[0];
+  if (!me?.passwordHash || !verifySecret(currentPassword, me.passwordHash)) {
+    return { ok: false, error: 'Your current password is not correct.' };
+  }
+
+  await db
+    .update(users)
+    .set({ passwordHash: hashSecret(newPassword), updatedAt: new Date() })
+    .where(eq(users.id, session.sub));
+  revalidatePath('/admin/team');
+  return { ok: true };
+}
+
 export async function setAdminActive(formData: FormData): Promise<ActionResult> {
   const session = await requireAdmin();
   const userId = String(formData.get('userId') ?? '');
