@@ -384,7 +384,7 @@ export default function TripForm({
               </span>
               <span className="mt-1.5 block">
                 {platform === 'ios'
-                  ? 'Open the Settings app, scroll down to Safari, tap Location, then choose Allow. Come back here and press Try again.'
+                  ? 'Open the Settings app, find the browser you are using (Safari, Chrome, Firefox), tap Location, then choose While Using the App. Come back here and press Try again.'
                   : platform === 'android'
                     ? 'Tap the lock or information icon left of the address bar, then Permissions, then Location, then Allow. Come back here and press Try again.'
                     : 'On Android: tap the lock or information icon left of the address bar, then Permissions, then Location, then Allow. On iPhone: open Settings, scroll to Safari, tap Location, then Allow.'}
