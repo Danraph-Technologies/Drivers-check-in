@@ -26,6 +26,8 @@ One report per trip. A driver can file several reports in one day.
 4. Seats loaded.
 5. Amount per seat in Naira. The full trip amount is this times the number of seats, shown live on the form as it is typed.
 6. Was there any cargo load? Yes or No. If yes, the cargo amount in Naira.
+
+Location behaviour: the browser permission prompt is requested the moment the trip form opens (works on Android Chrome and iPhone Safari, since the request comes from a user visit), not only at Save. The form shows a location status card: a heads-up while asking, unblock steps for Android and iPhone plus a Try again button if the driver tapped Block, and a retry hint if the phone could not get a fix. Saving is never blocked (the owner chose not to frustrate drivers), but the report records the location status. When a captured position is more than 60 km from the recognised endpoint of the claimed route (Enugu, Nsukka, Onitsha, Awka, Aba, Owerri), the trip is flagged: a red "GPS far from route" badge appears in the admin dashboard and trips list, a banner on the trip detail page, and a warning inside the location section of the detail modal.
 7. Departure time.
 8. Arrival time. Defaults to now, since drivers usually file just after landing.
 

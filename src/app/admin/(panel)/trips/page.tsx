@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { and, desc, eq, gte, lte, ilike, or } from 'drizzle-orm';
-import { Banknote, Package, Plus, Route, Search } from 'lucide-react';
+import { Banknote, Package, Plus, Route, Search, TriangleAlert } from 'lucide-react';
 import { db } from '@/db';
 import { trips, drivers, users, buses } from '@/db/schema';
 import { requireAdmin } from '@/lib/auth';
@@ -78,6 +78,7 @@ export default async function AdminTrips({
         accuracyM: trips.accuracyM,
         locationAddress: trips.locationAddress,
         locationStatus: trips.locationStatus,
+        locationMismatch: trips.locationMismatch,
         submittedAt: trips.submittedAt,
         driverName: users.name,
         busLabel: buses.label,
@@ -133,6 +134,7 @@ export default async function AdminTrips({
     arrivalTime: t.arrival,
     submittedAt: t.submittedAt,
     locationStatus: t.locationStatus,
+    locationMismatch: t.locationMismatch,
     lat: t.lat,
     lng: t.lng,
     accuracyM: t.accuracyM,
@@ -306,6 +308,12 @@ export default async function AdminTrips({
                     {t.from}
                     <span className="mx-1.5 text-ink-300">&rarr;</span>
                     {t.to}
+                    {t.locationMismatch ? (
+                      <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-700">
+                        <TriangleAlert size={11} />
+                        GPS far from route
+                      </span>
+                    ) : null}
                   </td>
                   <td className="num font-semibold">{t.seats}</td>
                   <td className="num font-semibold">{formatNaira(t.tripAmount * t.seats)}</td>

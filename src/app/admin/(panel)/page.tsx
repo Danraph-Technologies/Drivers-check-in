@@ -5,6 +5,7 @@ import {
   BusFront,
   ChevronRight,
   Fuel,
+  TriangleAlert,
   Package,
   Phone,
   Route,
@@ -80,6 +81,7 @@ export default async function AdminDashboard({
         accuracyM: trips.accuracyM,
         locationAddress: trips.locationAddress,
         locationStatus: trips.locationStatus,
+        locationMismatch: trips.locationMismatch,
         submittedAt: trips.submittedAt,
         driverName: users.name,
         busLabel: buses.label,
@@ -151,6 +153,7 @@ export default async function AdminDashboard({
     arrivalTime: t.arrival,
     submittedAt: t.submittedAt,
     locationStatus: t.locationStatus,
+    locationMismatch: t.locationMismatch,
     lat: t.lat,
     lng: t.lng,
     accuracyM: t.accuracyM,
@@ -328,6 +331,12 @@ export default async function AdminDashboard({
                       {t.from}
                       <span className="mx-1.5 text-ink-300">&rarr;</span>
                       {t.to}
+                      {t.locationMismatch ? (
+                        <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-700">
+                          <TriangleAlert size={11} />
+                          GPS far from route
+                        </span>
+                      ) : null}
                     </td>
                     <td className="num font-semibold">{t.seats}</td>
                     <td className="num font-semibold">

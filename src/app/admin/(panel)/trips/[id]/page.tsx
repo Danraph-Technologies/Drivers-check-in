@@ -190,6 +190,15 @@ export default async function AdminTripDetail({
           <span>This report is voided. Reason: {t.voidReason}</span>
         </div>
       ) : null}
+      {t.locationMismatch ? (
+        <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-800">
+          <TriangleAlert size={17} className="mt-0.5 shrink-0" />
+          <span>
+            GPS far from route: the phone location recorded with this report is far from both
+            ends of the claimed route.
+          </span>
+        </div>
+      ) : null}
 
       <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
         <section className="card p-4">

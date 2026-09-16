@@ -1,5 +1,20 @@
 import 'server-only';
 
+/** Great-circle distance between two points, in kilometres. */
+export function haversineKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6371;
+  const rad = Math.PI / 180;
+  const a =
+    Math.sin((lat2 - lat1) * rad / 2) ** 2 +
+    Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin((lng2 - lng1) * rad / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
 /**
  * Best-effort reverse geocode of a GPS point into a short place name
  * ("Trans-Ekulu Extension, Enugu East, Enugu"). Uses the free

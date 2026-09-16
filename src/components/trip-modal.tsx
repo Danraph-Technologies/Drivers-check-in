@@ -37,6 +37,7 @@ export type TripModalData = {
   arrivalTime: string;
   submittedAt: string | Date;
   locationStatus: TripModalLocationStatus;
+  locationMismatch?: boolean;
   lat: number | null;
   lng: number | null;
   accuracyM: number | null;
@@ -207,6 +208,12 @@ function ModalShell({ trip, onClose }: { trip: TripModalData; onClose: () => voi
             </h3>
             {trip.locationStatus === 'captured' && trip.lat !== null && trip.lng !== null ? (
               <>
+                {trip.locationMismatch ? (
+                  <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-xs font-bold text-red-700">
+                    <TriangleAlert size={13} className="mt-0.5 shrink-0" />
+                    This phone was far from the claimed route when the report was sent.
+                  </p>
+                ) : null}
                 <p className="mt-2 text-sm text-ink-600">{LOCATION_NOTES.captured}</p>
                 {trip.locationAddress ? (
                   <p className="mt-2 text-sm font-semibold text-ink-900">{trip.locationAddress}</p>

@@ -5,7 +5,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/db';
 import { trips, tripAudit, drivers, buses, users } from '@/db/schema';
 import { requireAdmin, requireDriver, hashSecret, verifySecret } from '@/lib/auth';
-import { reverseGeocode } from '@/lib/geocode';
+import { reverseGeocode, haversineKm } from '@/lib/geocode';
 import {
   tripReportSchema,
   editTripSchema,
@@ -49,8 +49,37 @@ export async function submitTripReport(input: unknown, location: unknown): Promi
   // Resolve the GPS point into a real place name (street, area, town).
   // Best effort: a slow or failed lookup never blocks the report.
   let locationAddress: string | null = null;
+  let locationMismatch = false;
   if (loc?.status === 'captured' && typeof loc.lat === 'number' && typeof loc.lng === 'number') {
     locationAddress = await reverseGeocode(loc.lat, loc.lng);
+
+    // Anti-lie check: the phone must be near the claimed route. Enugu to
+    // Nsukka but the phone is in Lagos means a red flag on the trip.
+    // From/To are free-typed, so this compares against the admin-entered
+    // reference points below; unknown towns simply pass.
+    const KNOWN_PLACES: { name: string; lat: number; lng: number }[] = [
+      { name: 'enugu', lat: 6.4491, lng: 7.5065 },
+      { name: 'nsukka', lat: 6.6607, lng: 7.3958 },
+      { name: 'onitsha', lat: 6.1413, lng: 6.8023 },
+      { name: 'awka', lat: 6.2125, lng: 7.0694 },
+      { name: 'aba', lat: 5.1066, lng: 7.3667 },
+      { name: 'owerri', lat: 5.4897, lng: 7.0311 },
+    ];
+    const fromMatch = KNOWN_PLACES.find((p) =>
+      data.fromLocation.toLowerCase().includes(p.name),
+    );
+    const toMatch = KNOWN_PLACES.find((p) =>
+      data.toLocation.toLowerCase().includes(p.name),
+    );
+    const endpoints = [fromMatch, toMatch].filter((p): p is typeof KNOWN_PLACES[number] => Boolean(p));
+    if (endpoints.length > 0) {
+      const nearest = Math.min(
+        ...endpoints.map((p) => haversineKm(loc.lat as number, loc.lng as number, p.lat, p.lng)),
+      );
+      // Closer than 60 km to a claimed endpoint is normal (drivers file
+      // right after landing). Beyond that, flag it.
+      locationMismatch = nearest > 60;
+    }
   }
 
   try {
@@ -75,6 +104,7 @@ export async function submitTripReport(input: unknown, location: unknown): Promi
         lng: loc?.status === 'captured' ? (loc.lng ?? null) : null,
         accuracyM: loc?.status === 'captured' ? (loc.accuracyM ?? null) : null,
         locationAddress,
+        locationMismatch,
         locationStatus: loc?.status ?? 'unavailable',
       })
       .onConflictDoNothing({ target: trips.clientRef })

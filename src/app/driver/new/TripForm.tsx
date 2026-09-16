@@ -71,7 +71,28 @@ export default function TripForm({
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [restored, setRestored] = useState(false);
+  const [locState, setLocState] = useState<'asking' | 'ok' | 'denied' | 'fail'>('asking');
   const locationRef = useRef<LocationResult>({ status: 'unavailable' });
+
+  // Ask for permission the moment the form opens, so the browser prompt
+  // shows before the driver has typed anything. Both Android (Chrome) and
+  // iPhone (Safari) show it: a request must come from the page itself,
+  // which this is. If the driver taps Block, the browser will not ask
+  // again on its own - the card below explains how to unblock.
+  useEffect(() => {
+    let cancelled = false;
+    captureLocation().then((loc) => {
+      if (cancelled) return;
+      locationRef.current = loc;
+      if (loc.status === 'captured') setLocState('ok');
+      else if (loc.status === 'denied') setLocState('denied');
+      else setLocState('fail');
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const {
     register,
@@ -194,8 +215,12 @@ export default function TripForm({
     if (status === 'saving') return;
     setError(null);
     setStatus('saving');
-    const loc = await captureLocation();
+    const loc =
+      locationRef.current.status === 'captured' ? locationRef.current : await captureLocation();
     locationRef.current = loc;
+    if (loc.status === 'captured') setLocState('ok');
+    else if (loc.status === 'denied') setLocState('denied');
+    else setLocState('fail');
 
     try {
       const result = await submitTripReport(
@@ -315,6 +340,82 @@ export default function TripForm({
         <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
           <TriangleAlert size={17} className="mt-0.5 shrink-0" />
           <span>We restored your unsent entries from this phone.</span>
+        </div>
+      ) : null}
+
+      {locState !== 'ok' ? (
+        <div
+          className={`mb-4 rounded-xl border px-4 py-3 text-sm ${
+            locState === 'asking'
+              ? 'border-brand-200 bg-brand-50 text-brand-900'
+              : 'border-amber-200 bg-amber-50 text-amber-900'
+          }`}
+        >
+          {locState === 'asking' ? (
+            <span className="flex items-start gap-2.5 font-medium">
+              <MapPin size={17} className="mt-0.5 shrink-0" />
+              <span>
+                Allow location when your phone asks. The company records where you landed to
+                confirm your trip.
+              </span>
+            </span>
+          ) : null}
+          {locState === 'denied' ? (
+            <>
+              <span className="flex items-start gap-2.5 font-bold">
+                <TriangleAlert size={17} className="mt-0.5 shrink-0" />
+                <span>Location is turned off for this app.</span>
+              </span>
+              <span className="mt-1.5 block">
+                On Android (Chrome): tap the lock or information icon left of the address bar,
+                then Permissions, then Location, then Allow. On iPhone (Safari): open Settings,
+                scroll to Safari, then Location, and set it to Ask or Allow while using the
+                website.
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setLocState('asking');
+                  captureLocation().then((loc) => {
+                    locationRef.current = loc;
+                    if (loc.status === 'captured') setLocState('ok');
+                    else if (loc.status === 'denied') setLocState('denied');
+                    else setLocState('fail');
+                  });
+                }}
+                className="btn btn-outline btn-sm mt-2.5"
+              >
+                Try again
+              </button>
+            </>
+          ) : null}
+          {locState === 'fail' ? (
+            <>
+              <span className="flex items-start gap-2.5 font-bold">
+                <TriangleAlert size={17} className="mt-0.5 shrink-0" />
+                <span>Your phone could not get a location just now.</span>
+              </span>
+              <span className="mt-1.5 block">
+                Go outside or near a window with open sky and press Try again. You can still save
+                the report, but management may ask about the missing location.
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setLocState('asking');
+                  captureLocation().then((loc) => {
+                    locationRef.current = loc;
+                    if (loc.status === 'captured') setLocState('ok');
+                    else if (loc.status === 'denied') setLocState('denied');
+                    else setLocState('fail');
+                  });
+                }}
+                className="btn btn-outline btn-sm mt-2.5"
+              >
+                Try again
+              </button>
+            </>
+          ) : null}
         </div>
       ) : null}
       {error ? (

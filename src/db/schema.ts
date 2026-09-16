@@ -124,6 +124,8 @@ export const trips = pgTable(
     // Best-effort place name resolved from the GPS point at submission.
     locationAddress: text('location_address'),
     locationStatus: locationStatus('location_status').notNull(),
+    // Set when the captured GPS point is far from the claimed From/To route.
+    locationMismatch: boolean('location_mismatch').notNull().default(false),
     isVoided: boolean('is_voided').notNull().default(false),
     voidedAt: timestamp('voided_at', { withTimezone: true }),
     voidedByUserId: uuid('voided_by_user_id').references(() => users.id),
